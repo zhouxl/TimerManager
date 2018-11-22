@@ -34,7 +34,7 @@ class Father: Timerable {
     }
 
     func onResponse(repeatCount: UInt, isComplete: Bool) {
-        print("father \(repeatCount)")
+        print("father \(repeatCount) \(CACurrentMediaTime())")
     }
 
 }

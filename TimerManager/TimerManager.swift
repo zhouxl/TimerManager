@@ -11,34 +11,38 @@ import Foundation
 final public class TimerManager {
     /// total count after Timer begin.
     var count: UInt = 0
-    var startTimeInterval: TimeInterval = 0
     var isRunning: Bool = false
+    var duration: Float {
+        return Float(count) / 2.0;
+    }
 
     static let manager = TimerManager()
-    fileprivate var timer: Timer?
     fileprivate var items = [TimerItem]()
     fileprivate let queue = DispatchQueue(label: "com.timertask.manager")
+    fileprivate let timer: DispatchSourceTimer
 
-    private init() {}
+    private init() {
+
+        timer = DispatchSource.makeTimerSource(flags: [.strict], queue: DispatchQueue.global())
+        timer.schedule(wallDeadline: DispatchWallTime.now(), repeating: .milliseconds(500), leeway: .milliseconds(10))
+        timer.setEventHandler { [weak self] in
+
+            self?.timerAction()
+        }
+    }
 
     private func beginTimerIfNeed() {
-        if timer == nil {
+        if !isRunning {
             count = 0;
-            startTimeInterval = Date().timeIntervalSince1970
             isRunning = true
-            timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true, block: { [weak self] _ in
-                self?.timerAction()
-            })
-            RunLoop.current.add(timer!, forMode: .common)
+            timer.resume()
         }
     }
 
     private func stopTimerIfNeed() {
-        if timer != nil && items.count == 0 {
-            timer!.invalidate()
-            timer = nil
+        if isRunning {
+            timer.suspend()
             count = 0
-            startTimeInterval = 0
             isRunning = false
         }
     }
@@ -90,8 +94,8 @@ final public class TimerManager {
             guard let strongSelf = self else { return }
             for (index, value) in strongSelf.items.enumerated() {
                 value.step += 1;
-                let interval = value.target.timerInterval()
-                guard value.step % interval == 0 else {
+                let actionCount = value.target.timerInterval() * 2;
+                guard value.step % actionCount == 0 else {
                     continue
                 }
                 value.repeatCount += 1
